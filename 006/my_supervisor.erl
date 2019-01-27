@@ -2,6 +2,75 @@
 -export([start_link/2, stop/1]).
 -export([init/1]).
 
+%%%
+-spec get_timestamp() -> integer().
+
+get_timestamp() ->
+	%TS = {_,_,Micro} = os:timestamp(),
+	%{{Year,Month,Day},{Hour,Minute,Second}} = calendar:now_to_universal_time(TS),
+	{Mega, Sec, Micro} = os:timestamp(),
+	(Mega*1000000 + Sec)*1000 + round(Micro/1000).
+
+
+
+count_since([], Ts) ->
+	0;
+
+count_since([H|[]], Ts) ->
+	case H >= Ts of
+		true ->
+			1;
+		false ->
+			io:format("[* ~w ~w]", [H, Ts]),
+			0;
+		_ ->
+			error
+	end;
+
+
+count_since([H|T], Ts) ->
+	case H >= Ts of
+		true ->
+			1 + count_since(T, Ts);
+		false ->
+			0 + count_since(T, Ts);
+		_ ->
+			false
+	end;
+
+count_since(_, _) ->
+	{error, count_since, 2}.
+
+
+
+clear_before([], Ts) ->
+	[];
+
+clear_before([H|[]], Ts) ->
+	case H >= Ts of
+		true ->
+			[H];
+		false ->
+			[];
+		_ ->
+			error
+	end;
+
+clear_before([H|T], Ts) ->
+	case H >= Ts of
+		true ->
+			[H] ++ clear_before(T, Ts);
+		false ->
+			clear_before(T, Ts);
+		_ ->
+			false
+	end;
+
+clear_before(_, _) ->
+	{error, clear_before, 2}.
+
+%%%
+
 start_link(Name, ChildSpecList) ->
 	register(Name, spawn_link(my_supervisor, init, [ChildSpecList])), ok.
 
@@ -14,21 +83,42 @@ start_children( [] ) -> [];
 start_children([{M, F, A, T} | ChildSpecList]) ->
 	case (catch apply(M,F,A)) of
 		{ok, Pid} ->
-		[{Pid, {M,F,A,T}}|start_children(ChildSpecList)];
+		Runs = [get_timestamp()],
+		[{Pid, {M,F,A,T,Runs}}|start_children(ChildSpecList)];
 		_ ->
 			start_children(ChildSpecList)
 end.
 
 restart_child(Pid, ChildList) ->
-	{value, {Pid, {M,F,A,T}}} = lists:keysearch(Pid, 1, ChildList),
+	{value, {Pid, {M,F,A,T,Runs}}} = lists:keysearch(Pid, 1, ChildList),
 	case T of
 		permanent -> 
 			io:format("[delete]"),
 			lists:keydelete(Pid,1,ChildList);
 		transient ->
 			io:format("[restart]"),
-			{ok, NewPid} = apply(M,F,A),
-			[{NewPid, {M,F,A,T}}|lists:keydelete(Pid,1,ChildList)];
+			%io:format("[~w]", [Runs]),
+			
+			Since = get_timestamp() - 1000*60*1,
+			C = count_since(Runs, Since),
+			%io:format("[count: ~p]", [C]),
+			RunsClear = clear_before(Runs, Since),
+			%io:format("[clear: ~w]", [RunsClear]),
+			%io:format("[count: ~p ~p]", [C, length(RunsClear)]),
+			N = length(RunsClear),
+
+			if
+				N > 5 -> % remove
+					Res = lists:keydelete(Pid,1,ChildList),
+					Res;
+				not(N>5) -> % restart
+					RunsNew = Runs ++ [get_timestamp()],
+					%io:format("[~w]", [RunsNew]),
+					{ok, NewPid} = apply(M,F,A),
+					Res = [{NewPid, {M,F,A,T,RunsNew}}|lists:keydelete(Pid,1,ChildList)],
+					Res
+			end;
+
 		_ -> true
 	end.
 
