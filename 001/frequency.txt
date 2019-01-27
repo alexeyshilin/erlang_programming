@@ -1,0 +1,27 @@
+2> c(frequency).
+{ok,frequency}
+3> frequency:start().
+true
+4> frequency:allocate().
+{ok,10}
+5> frequency:allocate().
+{ok,11}
+6> frequency:allocate().
+{ok,12}
+7> frequency:allocate().
+{ok,13}
+8> frequency:allocate().
+{ok,14}
+9> frequency:allocate().
+{ok,15}
+10> frequency:allocate().
+{error,nofrequency}
+11> frequency:deallocate(11).
+ok
+12> frequency:allocate().    
+{ok,11}
+13> frequency:stop().    
+ok
+14> q().
+ok
+
