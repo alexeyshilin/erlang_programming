@@ -1,0 +1,17 @@
+1> event _manager:start(alarm, [ { l o g handler, "AlarmLog"}]).
+ok
+2> event manager:sendevent(alarm, {raisealarm, 10, cabinet open}).
+ok
+3> event manageriadd handler(alarm, iohandler, 1).
+ok
+4> eventmanager:sendevent(alarm, {clearalarm, 10, cabinet open}).
+#l,2009:03:16,08:33:14,clear,10,cabinet_open
+ok
+5> event_manager:send_event(alarm, {event, 156, linkup}).
+ok
+6> event manager:getdata(alarm, iohandler).
+{data,2}
+7> eventmanager:delete handler(alarm, statshandler).
+{error,instance}
+8> eventjnanager:stop(alarm).
+[{iohandler,{count,2}},{log handler,ok}]
