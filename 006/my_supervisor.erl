@@ -256,3 +256,27 @@ terminate( _ChildList) -> ok.
 % my_supervisor:stop_child(my_supervisor, 3).
 % whereis(add_one).
 % my_supervisor:stop(my_supervisor).
+
+
+
+
+
+% c(my_db).
+% c(mutex).
+% c(my_supervisor).
+%
+% my_supervisor:start_link(my_supervisor, [{add_two, start, [], transient}]).
+% my_supervisor:start_child(my_supervisor,add_one, start, [], transient).
+% my_supervisor:start_child(my_supervisor,mutex, start, [], transient).
+% my_supervisor:start_child(my_supervisor,my_db, start, [], transient).
+% whereis(add_two).
+% whereis(add_one).
+% whereis(mutex).
+% whereis(my_db).
+% exit(whereis(add_two), kill).
+% exit(whereis(add_one), kill).
+% exit(whereis(mutex), kill).
+% exit(whereis(my_db), kill).
+% my_supervisor:stop_child(my_supervisor, 4).
+% whereis(mutex).
+% i().

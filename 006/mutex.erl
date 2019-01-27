@@ -5,7 +5,7 @@
 -export([init/0]).
 
 start() ->
-	Pid = spawn(?MODULE, init, []),
+	Pid = spawn_link(?MODULE, init, []),
 
 	%% ver.1    
 %    
@@ -31,7 +31,7 @@ start() ->
 	%end.
 
 	register(mutex, Pid),
-	Pid.
+	{ok, Pid}.
 
 stop() ->
 	mutex ! stop,
@@ -45,7 +45,7 @@ signal() ->
 	mutex ! {signal, self()}, ok.
 
 init() ->
-	process_flag(trap_exit, true),
+	%process_flag(trap_exit, true),
 
 	%exit("Test"), % test exit
 	free().
