@@ -1,6 +1,8 @@
 -module(my_supervisor).
 -export([start_link/2, stop/1]).
 -export([init/1]).
+-export([start_child/5]).
+-export([stop_child/2]).
 
 %%%
 -spec get_timestamp() -> integer().
@@ -76,21 +78,23 @@ start_link(Name, ChildSpecList) ->
 
 init(ChildSpecList) ->
 	process_flag(trap_exit, true),
-	loop(start_children(ChildSpecList)).
+	%loop(start_children(ChildSpecList)).
+	List = start_children(ChildSpecList, 0),
+	loop(List, length(List)+1).
 
-start_children( [] ) -> [];
+start_children( [], N ) -> [];
 
-start_children([{M, F, A, T} | ChildSpecList]) ->
+start_children([{M, F, A, T} | ChildSpecList], N) ->
 	case (catch apply(M,F,A)) of
 		{ok, Pid} ->
 		Runs = [get_timestamp()],
-		[{Pid, {M,F,A,T,Runs}}|start_children(ChildSpecList)];
+		[{Pid, {M,F,A,T,Runs, N+1}}|start_children(ChildSpecList, N+1)];
 		_ ->
-			start_children(ChildSpecList)
+			start_children(ChildSpecList, N)
 end.
 
 restart_child(Pid, ChildList) ->
-	{value, {Pid, {M,F,A,T,Runs}}} = lists:keysearch(Pid, 1, ChildList),
+	{value, {Pid, {M,F,A,T,Runs, Id}}} = lists:keysearch(Pid, 1, ChildList),
 	case T of
 		permanent -> 
 			io:format("[delete]"),
@@ -115,20 +119,88 @@ restart_child(Pid, ChildList) ->
 					RunsNew = Runs ++ [get_timestamp()],
 					%io:format("[~w]", [RunsNew]),
 					{ok, NewPid} = apply(M,F,A),
-					Res = [{NewPid, {M,F,A,T,RunsNew}}|lists:keydelete(Pid,1,ChildList)],
+					Res = [{NewPid, {M,F,A,T,RunsNew, Id}}|lists:keydelete(Pid,1,ChildList)],
 					Res
 			end;
 
 		_ -> true
 	end.
 
+%%%
+% Client
+start_child(Name, Module, Function, Argument, Type) when (Type==permanent) or (Type==transient) ->
+	Name ! {start_child, self(), {Module, Function, Argument, Type}},
+	receive
+			{reply, Id} ->
+				Id;
+			{error, Reason} ->
+				error
+	end;
+
+start_child(Name, Module, Function, Argument, Type) ->
+	{error, unknown_type, Type}.
+
+% Server
+start_child(ChildList, Module, Function, Argument, Type, Id) when (Type==permanent) or (Type==transient) ->
+	{ok, NewPid} = apply(Module,Function,Argument),
+	[{NewPid, {Module, Function, Argument, Type,[get_timestamp()], Id}} | ChildList];
+
+start_child(ChildList, Module, Function, Argument, Type, Id) ->
+	{error, unknown_type, Type}.
+
+
+stop_child(Id, []) ->
+	not_found;
+
+stop_child(Id, [{Pid, {_,_,_,_,_,I}} | []]) when (I==Id) ->
+	io:format("[try exit *: ~p ~w]", [I, Pid]),
+	unlink(Pid),
+	exit(Pid, stop_child),
+	[];
+
+stop_child(Id, [H|[]]) ->
+	io:format("[- ~p ~w]", [Id, H]),
+	[H];
+
+stop_child(Id, [{Pid, {_,_,_,_,_,I}} | T]) when (I==Id) ->
+	io:format("[try exit **: ~p ~w]", [I, Pid]),
+	unlink(Pid),
+	exit(Pid, "Stop child."),
+	T;
+
+stop_child(Id, [H|T]) ->
+	io:format("[- ~p ~w]", [Id, H]),
+	[H] ++ stop_child(Id, T);
+
+% Client
+stop_child(Name, Id) ->
+	Name ! {stop_child, self(), Id},
+	receive
+			{reply, Result} ->
+				Result;
+			{error, Reason} ->
+				error
+	end.
+%%%
+
 loop(ChildList) ->
+	loop(ChildList, 1).
+
+loop(ChildList, N) ->
 	receive
 		{'EXIT', Pid, _Reason} ->
 			NewChildList = restart_child(Pid, ChildList),
-			loop(NewChildList);
+			loop(NewChildList, N);
 		{stop, From} ->
-			From ! { reply , terminate(ChildList)}
+			From ! { reply , terminate(ChildList)};
+		{start_child, From, {Module, Function, Argument, Type}} ->
+			NewChildList = start_child(ChildList, Module, Function, Argument, Type, N+1),
+			From ! { reply , N+1},
+			loop(NewChildList, N+1);
+		{stop_child, From, Id} ->
+			NewChildList = stop_child(Id, ChildList),
+			From ! { reply , ok},
+			loop(NewChildList, N)
 	end.
 
 stop(Name) ->
@@ -171,4 +243,16 @@ terminate( _ChildList) -> ok.
 % add_two:request(100).
 % whereis(add_two).
 % exit(whereis(add_two), kill),whereis(add_two).
+% my_supervisor:stop(my_supervisor).
+
+
+
+% c(my_supervisor).
+%
+% my_supervisor:start_link(my_supervisor, [{add_two, start, [], transient}]).
+% my_supervisor:start_child(my_supervisor,add_one, start, [], transient).
+% whereis(add_one).
+% add_one:request(100).
+% my_supervisor:stop_child(my_supervisor, 3).
+% whereis(add_one).
 % my_supervisor:stop(my_supervisor).

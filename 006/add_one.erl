@@ -2,12 +2,17 @@
 -export([start/0, request/1, loop/0]).
 
 start() ->
-	register(add_one, spawn_link(add_one, loop, [])).
+	%register(add_one, spawn_link(add_one, loop, [])).
+	process_flag(trap_exit, true),
+	Pid = spawn_link(add_one, loop, []),
+	register(add_one, Pid),
+	{ok, Pid}.
 
 request(Int) ->
 	add_one ! {request, self() , Int},
 	receive
-		{ result, Result} -> Result
+		{ result, Result} -> Result;
+		{'EXIT', _Pid, Reason} -> {error, Reason}
 		after 1000 -> timeout
 	end.
 
