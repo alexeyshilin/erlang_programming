@@ -1,0 +1,20 @@
+
+
+c(myring).
+{ok,myring}
+
+2> timer:tc(myring, start , [100000]).
+{484000,ok}
+3> timer:tc(myring, start, [1000000]).
+{4289360,ok}
+4> timer:tc(myring, start, [10000000]).
+{40572800,ok}
+
+
+1> timer:tc(myring, start , [100000]).
+{159106,ok}
+2> timer:tc(myring, start, [1000000]).
+{1481567,ok}
+3> timer:tc(myring, start, [10000000]).
+{14866019,ok}
+
