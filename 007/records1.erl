@@ -1,5 +1,6 @@
 -module(records1).
 -export( [ birthday/1 , joe/0 , showPerson/1]).
+-export( [ foobar/1]).
 
 -record(address, {country, city, street, building, apartment}).
 -record(person, {name,age=0,phone,addr}).
@@ -15,6 +16,14 @@ joe() ->
 
 showPerson(#person{age=Age,phone=Phone,name=Name, addr=Address}) ->
 	io:format("address: ~p, name: ~p age: ~p phone: ~p~n" , [Address, Name,Age,Phone]).
+
+foobar(P) when P#person.name == "Joe" ->
+	io:format("Hi Joe!"),
+	ok;
+
+foobar(P) when is_record(P, person) ->
+	io:format("Hi ~p!", [P#person.name]),
+	ok.
 
 % c(records1).
 %
@@ -38,3 +47,6 @@ showPerson(#person{age=Age,phone=Phone,name=Name, addr=Address}) ->
 % P.
 % records1:birthday(P).
 % records1:showPerson(P).
+
+% P = #person{name = "Joe", age=21, addr=#address{apartment=19, building=7, street="Testing", city="Testvill", country="Test"} }.
+% records1:foobar(P).
