@@ -1,7 +1,8 @@
 -module(records1).
 -export( [ birthday/1 , joe/0 , showPerson/1]).
 
--record(person, {name,age=0,phone}).
+-record(address, {country, city, street, building, apartment}).
+-record(person, {name,age=0,phone,addr}).
 -record(name, {first, surname}).
 
 birthday(#person{age=Age} = P) ->
@@ -12,8 +13,8 @@ joe() ->
 			age=21,
 			phone="999-999"}.
 
-showPerson(#person{age=Age,phone=Phone,name=Name}) ->
-	io:format("name: ~p age: ~p phone: - p - n " , [Name,Age,Phone]).
+showPerson(#person{age=Age,phone=Phone,name=Name, addr=Address}) ->
+	io:format("address: ~p, name: ~p age: ~p phone: ~p~n" , [Address, Name,Age,Phone]).
 
 % c(records1).
 %
@@ -31,3 +32,9 @@ showPerson(#person{age=Age,phone=Phone,name=Name}) ->
 % #person.name.
 %
 % compile:file(recordsl, ['E']).
+
+
+% P = #person{name = #name{first = "Robert", surname = "Virding" }, age=21, addr=#address{apartment=19, building=7, street="Testing", city="Testvill", country="Test"} }.
+% P.
+% records1:birthday(P).
+% records1:showPerson(P).
