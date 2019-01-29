@@ -1,0 +1,2 @@
+-record(circle, {radius}).
+-record(rectangle, {width, height}).
