@@ -20,6 +20,12 @@
 	-define(CALLS(Func), ok).
 -endif.
 
+-define(DAYOFWEEK(Day),
+	if
+		not((Day==mon) or (Day==tue) or (Day==wed) or (Day==thu) or (Day==fri) or (Day==sat) or (Day==sun)) -> exit(err_dayofweek);
+		((Day==mon) or (Day==tue) or (Day==wed) or (Day==thu) or (Day==fri) or (Day==sat) or (Day==sun)) -> Day
+	end
+).
 
 some_func(Param)->
 	?CALLS(some_func(Param)),
@@ -31,6 +37,10 @@ test()->
 	?SHOW_EVAL(length([1,2,3]), none),
 	some_func(111),
 	some_func(222),
+
+	Today = ?DAYOFWEEK(wed),
+	io:format("[today ~p]~n", [Today]),
+
 	ok.
 
 % c(macros).
