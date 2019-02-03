@@ -30,3 +30,5 @@ destroy(Db)
 %%     in function  db:read/2 (db.erl, line 11)
 %
 % dict:fetch(francesco, Db2).
+%
+% db:module_info().
