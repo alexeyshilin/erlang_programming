@@ -71,8 +71,5 @@ code_upgrade([{Key,Value}|RecordList], GbTree) ->
 % code:load_file(db).
 % code:soft_purge(db).
 % db:module_info().
-% db:code_upgrade(Db3).
+% Db4 = db:code_upgrade(Db3).
 
-%%{3,
-%% {francesco,london,nil,
-%%            {lelle,"Stockholm",{joern,'Stockholm',nil,nil},nil}}}
