@@ -1,34 +1,66 @@
 -module(db).
--export([new/0,write/3,read/2, delete/2,destroy/1]).
--vsn(1.1).
+-export([new/0, destroy/1, write/3, delete/2, read/2, convert/2]).
+-vsn(1.2).
 
-new()
-	-> dict:new().
+new() -> gb_trees:empty().
 
-write(Key, Data, Db) -> dict:store(Key, Data, Db).
+write(Key, Data, Db) -> gb_trees:insert(Key, Data, Db).
 
 read(Key, Db) ->
-	case dict:find(Key, Db) of
-		error
-			-> {error, instance};
-		{ok, Data} -> {ok, Data}
+	case gb_trees:lookup(Key, Db) of
+		none -> {error, instance};
+		{value, Data} -> {ok, Data}
 	end.
 
-delete(Key, Db) -> diet:erase(Key, Db).
+destroy(Db) -> ok.
 
-destroy(Db)
-	-> ok.
+delete(Key, Db) -> gb_trees:delete(Key, Db).
+
+convert(dict, Dict) ->
+	%dict(dict:fetch_keys(Dict), Dict, new());
+	Keys = dict:fetch_keys(Dict),
+	New = new(),
+	%io:format("[Keys: ~p]", [Keys]),
+	%io:format("[Dict: ~p]", [Dict]),
+	%io:format("[New: ~p]", [New]),
+	Res = dict(Keys, Dict, New),
+	%io:format("[Res: ~p]", [Res]),
+	Res;
+
+convert(_, Data) ->
+	Data.
+
+dict([Key|Tail], Diet, GbTree) ->
+	Data = dict:fetch(Key, Diet),
+	NewGbTree = gb_trees:insert(Key, Data, GbTree),
+	dict(Tail, Diet, NewGbTree);
+
+dict([], _, GbTree) -> GbTree.
+
+% mkdir /var/projects/test/erl/008/patches
+% cd /var/projects/test/erl/008/patches
+% erl
+% c(db).
+% cd ..
+
 
 % c(db).
 %
-% Db = db:new().
-% Dbl = db:write(francesco, sanfrancisco, Db).
-% Db2 = db:write(alison, london, Dbl).
-% db:read(francesco, Db2).
-%
-%%** exception error: no case clause matching sanfrancisco
-%%     in function  db:read/2 (db.erl, line 11)
-%
-% dict:fetch(francesco, Db2).
-%
+% cd('/var/projects/test/erl/008").
+% make:all([load]).
 % db:module_info().
+% db_server:start().
+% db_server:write(francesco, sanfrancisco).
+% db_server:write(alison, london).
+% db_server:read(alison).
+% db_server:read(martin).
+% code:add_patha("/var/projects/test/erl/008/patches").
+	%%compile:file(db). % file ./patches/db.erl must be already compiled
+% code:load_file(db).
+% code:soft_purge(db).
+% db_server:upgrade(dict).
+% db:module_info().
+% db_server:write(martin, cairo) .
+% db_server:read(francesco).
+% db_server:read(martin).
+%
