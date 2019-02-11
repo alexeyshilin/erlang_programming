@@ -26,6 +26,15 @@ func_map([H|T], F)->
 
 
 
+func_map2([H|[]], F)->
+	F(H);
+
+func_map2([H|T], F)->
+	F(H),
+	func_map2(T, F).
+
+
+
 test()->
 
 Fun1 = fun(S, E, Func) ->
@@ -38,7 +47,7 @@ Fun1 = fun(S, E, Func) ->
 end,
 
 
-	Fun1(1, 10, Fun1),
+	%Fun1(1, 10, Fun1),
 
 	%Res = lists:seq(1, 10),
 	%io:format("[~p]", [Res]),
@@ -55,7 +64,17 @@ FPrint2 = fun(V1, V2)->
 	end
 end,
 
-	func_map(lists:seq(1, 10), 3, FPrint2),
+	%func_map(lists:seq(1, 10), 3, FPrint2),
+
+FPrintOddEven = fun(V)->
+	if V rem 2 == 0 ->
+		io:format("[~p]", [V]);
+		not(V rem 2 == 0) ->
+			ok
+	end
+end,
+
+	func_map2(lists:seq(1, 10), FPrintOddEven),
 
 	ok.
 
