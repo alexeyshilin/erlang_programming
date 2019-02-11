@@ -2,6 +2,17 @@
 -export([test/0]).
 -vsv(0.1).
 
+
+
+func_map([H|[]], V, F)->
+	F(H,V);
+
+func_map([H|T], V, F)->
+	F(H, V),
+	func_map(T, V, F);
+
+
+
 func_map(S, E, F)->
 	Res = lists:seq(S, E),
 	func_map(Res, F).
@@ -12,6 +23,8 @@ func_map([H|[]], F)->
 func_map([H|T], F)->
 	F(H),
 	func_map(T, F).
+
+
 
 test()->
 
@@ -34,7 +47,15 @@ FPrint = fun(V)->
 	io:format("[~p]", [V])
 end,
 
-	func_map(1,10, FPrint),
+FPrint2 = fun(V1, V2)->
+	if V1 =< V2 ->
+		io:format("[~p]", [V1]);
+		V1 > V2 ->
+			ok
+	end
+end,
+
+	func_map(lists:seq(1, 10), 3, FPrint2),
 
 	ok.
 
