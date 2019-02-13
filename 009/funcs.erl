@@ -34,6 +34,38 @@ func_map2([H|T], F)->
 	func_map2(T, F).
 
 
+func_map3([H|[]], F)->
+	F(H);
+
+func_map3([H|T], F)->
+	F(H),
+	func_map3(T, F).
+
+
+func_transform([], F)->
+	[];
+
+func_transform([H|[]], F)->
+	H;
+
+func_transform([H|T], F)->
+	func_transform([H|T], F, []).
+
+func_transform([H|T], F, [])->
+	Res = F(H, []),
+	func_transform(T, F, Res);
+
+func_transform([], F, Accum)->
+	Accum;
+
+func_transform([H|[]], F, Accum)->
+	Res = F(H, Accum),
+	Res;
+
+func_transform([H|T], F, Accum)->
+	Res = F(H, Accum),
+	func_transform(T, F, Res).
+
 
 test()->
 
@@ -74,7 +106,16 @@ FPrintOddEven = fun(V)->
 	end
 end,
 
-	func_map2(lists:seq(1, 10), FPrintOddEven),
+	%func_map2(lists:seq(1, 10), FPrintOddEven),
+
+FuncJoin = fun(V, Accum)->
+	Accum ++ V
+end,
+
+	LList = [[1],[1,2,9],[4,1,0,7],[9,2]],
+
+	Res = func_transform(LList, FuncJoin),
+	Res = [1,1,2,9,4,1,0,7,9,2],
 
 	ok.
 
