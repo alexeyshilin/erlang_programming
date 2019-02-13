@@ -117,6 +117,15 @@ end,
 	Res = func_transform(LList, FuncJoin),
 	Res = [1,1,2,9,4,1,0,7,9,2],
 
+FuncSum = fun(V, Sum)->
+	if Sum == [] -> 0+V;
+		not(Sum == []) -> Sum + V
+	end
+end,
+
+	Res2 = func_transform(Res, FuncSum),
+	Res2 = 1+1+2+9+4+1+0+7+9+2,
+
 	ok.
 
 
