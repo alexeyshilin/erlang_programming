@@ -25,13 +25,27 @@ zip(A,B)->
 	exit(error).
 
 
+zipWith(F, [],[])->
+	[];
+
+zipWith(F, L1, L2)->
+	L3 = zip(L1, L2),
+	[F(X,Y) || {X,Y}<-L3].
+
 test()->
 	%Res1 = zip([1,2], [3,4,5]),
 	%Res1.
 	[{1,3},{2,4}] = zip([1,2], [3,4,5]),
+
+	Add = fun(X,Y)->
+		X+Y
+	end,
+
+	%Res2 = zipWith(Add, [1,2], [3,4,5]),
+	%Res2.
+	[4,6] = zipWith(Add, [1,2], [3,4,5]),
 	ok.
 
 % c(ziptest).
 %
 % ziptest:test().
-%
