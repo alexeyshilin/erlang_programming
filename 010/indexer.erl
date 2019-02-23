@@ -39,7 +39,13 @@ processWords(Words,N) ->
 			if
 				length(Word) > 3 ->
 					Normalise = string:to_lower(Word),
-					ets:insert(indexTable,{{Normalise , N } } ) ;
+					OldRec = ets:lookup(indexTable, Normalise),
+					case OldRec of
+						[] ->
+							ets:insert(indexTable,{Normalise , [N]} ) ;
+						[{Normalise,Lst}] ->
+							ets:insert(indexTable,{Normalise , Lst++[N]} )
+					end;
 				true -> ok
 			end,
 		processWords(Rest,N)
@@ -50,27 +56,21 @@ prettyIndex() ->
 	case ets:first( indexTable ) of
 		'$end_of_table' ->
 			ok;
-		First ->
-			case First of
-				{Word, N} ->
-					IndexEntry = {Word, [N]}
-			end,
-			prettyIndexNext(First,IndexEntry)
+		First0 ->
+			[{Word, Lst}] = ets:lookup(indexTable, First0),
+			prettyEntry({Word, Lst}),
+			prettyIndexNext(First0)
 	end.
 
-prettyIndexNext(Entry,{Word, Lines}=IndexEntry) ->
+prettyIndexNext(Entry) ->
 	Next = ets:next(indexTable,Entry),
 	case Next of
 		'$end_of_table' ->
-			prettyEntry(IndexEntry);
-		{NextWord, M} ->
-			if
-				NextWord == Word ->
-					prettyIndexNext(Next,{Word, [M|Lines]});
-				true ->
-					prettyEntry(IndexEntry),
-					prettyIndexNext(Next,{NextWord, [M]})
-			end
+			ok;
+		NextWord ->
+			[{Word2, Lst2}] = ets:lookup(indexTable, NextWord),
+			prettyEntry({Word2, Lst2}),
+			prettyIndexNext(Next)
 	end.
 
 prettyEntry({Word, Lines}=IndexEntry)->
