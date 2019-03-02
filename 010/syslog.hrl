@@ -1,0 +1,1 @@
+-record(message, {text=null, from=null, to=null}).
