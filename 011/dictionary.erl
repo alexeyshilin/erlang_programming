@@ -461,6 +461,10 @@ test()->
 	Pid2 = dictionary:server_run(srv2, some2, myTable2),
 	Pid3 = dictionary:server_run(srv3, some3, myTable3),
 
+	true = dictionary:cli_is_alive(Pid1),
+	true = dictionary:cli_is_alive(Pid2),
+	true = dictionary:cli_is_alive(Pid3),
+
 	Node1 = cli_self_node(Pid1),
 	Node2 = cli_self_node(Pid2),
 	Node3 = cli_self_node(Pid3),
