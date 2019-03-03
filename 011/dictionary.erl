@@ -1,5 +1,5 @@
 -module(dictionary).
--export([dictionary/1, loop/3, server_run/3, firestarter/2]).
+-export([dictionary/1, loop/4, server_run/3, firestarter/3]).
 -export([cli_server_stop/1]).
 -export([cli_start/2, cli_stop/1, cli_is_alive/1, cli_self_node/1, cli_add_node/3, cli_remove_node/2, cli_get_nodes/1, cli_remote_ping/1, cli_remote/1]). % client
 -export([cli_db_new/1,cli_db_drop/1]).
@@ -18,7 +18,7 @@ server_run(ProcName, NodeName, TableName) ->
 	%register(srv, self()),
 	%loop().
 	%Pid = spawn(dictionary, loop, [[], TableId, TableName]),
-	Pid = spawn(dictionary, firestarter, [NodeName, TableName]),
+	Pid = spawn(dictionary, firestarter, [NodeName, TableName, ProcName]),
 	register(ProcName, Pid),
 
 	Pid.
@@ -142,15 +142,15 @@ for_each_node(F, [H|T]) ->
 response(Pid, Cmd, Data)->
 	Pid ! {self(), Cmd, Data}.
 
-firestarter(NodeName, TableName)->
+firestarter(NodeName, TableName, ProcName)->
 	Id = dictionary:dictionary(TableName),
 
 	net_kernel:start([NodeName]),
 	erlang:set_cookie(node(), test_cookie_value),
 
-	loop([], Id, TableName).
+	loop([], Id, TableName, ProcName).
 
-loop(Nodes, TableId, TableName)->
+loop(Nodes, TableId, TableName, ProcName)->
 	receive
 		{ok, Res} -> ok;
 
@@ -158,33 +158,33 @@ loop(Nodes, TableId, TableName)->
 				TableIdNew = dictionary(TableName),
 				Pid ! {self(), start_resp, ok},
 				c:flush(),
-				loop(Nodes, TableIdNew, TableName);
+				loop(Nodes, TableIdNew, TableName, ProcName);
 		{Pid, db_drop, null} when is_pid(Pid) -> 
 				dictionary_(TableId),
 				Pid ! {self(), start_resp, ok},
 				c:flush(),
-				loop(Nodes, null, null);
+				loop(Nodes, null, null, null);
 
 		{Pid, start, Name} when is_pid(Pid) -> 
 				net_kernel:start([Name]),
 				erlang:set_cookie(node(), test_cookie_value),
 				Pid ! {self(), start_resp, ok},
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 		{Pid, stop, null} when is_pid(Pid) -> 
 				net_kernel:stop(),
 				Pid ! {self(), stop_resp, ok},
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 		{Pid, is_alive, null} when is_pid(Pid) -> 
 				Pid ! {self(), is_alive_resp, erlang:is_alive()},
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 
 		{Pid, self_node, null} when is_pid(Pid) -> 
 				Pid ! {self(), self_node_resp, node()},
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 
 		{Pid, add_node_tmp, NodeNew} when is_pid(Pid) -> 
 				io:format("[~p]", [add_node]),
@@ -198,10 +198,17 @@ loop(Nodes, TableId, TableName)->
 				% end
 				Pid ! {self(), add_node_resp, ok},
 				c:flush(),
-				loop(NewNodes, TableId, TableName);
-		{Pid, add_node, {Node,ProcName}} when is_pid(Pid) -> 
+				loop(NewNodes, TableId, TableName, ProcName);
+
+		{Pid, add_node, {Node,ProcNameDst}} when (node()==Node) and (ProcName==ProcNameDst) ->
 				io:format("[~p]", [add_node]),
-				NewNodes = add_node(Nodes, {Node,ProcName}),
+				io:format("[skip self node]"),
+				Pid ! {self(), add_node_resp, skip},
+				c:flush(),
+				loop(Nodes, TableId, TableName, ProcName);
+		{Pid, add_node, {Node,ProcNameDst}} when is_pid(Pid) -> 
+				io:format("[~p]", [add_node]),
+				NewNodes = add_node(Nodes, {Node,ProcNameDst}),
 				
 				%erlang:set_cookie(node(), test_cookie_value),
 				net_kernel:connect(Node),
@@ -211,7 +218,7 @@ loop(Nodes, TableId, TableName)->
 
 				Pid ! {self(), add_node_resp, ok},
 				c:flush(),
-				loop(NewNodes, TableId, TableName);
+				loop(NewNodes, TableId, TableName, ProcName);
 
 		{Pid, remove_node_tmp, Node4Remove} when is_pid(Pid) -> 
 				io:format("[~p]", [remove_node]),
@@ -222,7 +229,7 @@ loop(Nodes, TableId, TableName)->
 				% end
 				Pid ! {self(), remove_node_resp, ok},
 				c:flush(),
-				loop(NewNodes, TableId, TableName);
+				loop(NewNodes, TableId, TableName, ProcName);
 		{Pid, remove_node, Node} when is_pid(Pid) -> 
 				io:format("[~p]", [remove_node]),
 				NewNodes = remove_node(Nodes, Node),
@@ -232,19 +239,19 @@ loop(Nodes, TableId, TableName)->
 				Pid ! {self(), remove_node_resp, ok},
 				io:format("[~p]", [NewNodes]),
 				c:flush(),
-				loop(NewNodes, TableId, TableName);
+				loop(NewNodes, TableId, TableName, ProcName);
 
 		{nodedown, Node} ->
 				io:format("[~p ~p]", [nodedown, Node]),
 				NewNodes = remove_node(Nodes, Node),
 				c:flush(),
-				loop(NewNodes, TableId, TableName);
+				loop(NewNodes, TableId, TableName, ProcName);
 
 		{Pid, get_nodes, Node} when is_pid(Pid) -> 
 				io:format("[~p]", [get_nodes]),
 				Pid ! {self(), get_nodes_resp, Nodes},
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 
 		{Pid, ping, Params} when is_pid(Pid) -> 
 				io:format("[~p]", [remote_ping]),
@@ -256,13 +263,13 @@ loop(Nodes, TableId, TableName)->
 
 				Pid ! {self(), ping_resp, ok},
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 
 		{Pid, all_data, Params} when is_pid(Pid) -> 
 				io:format("[~p]", [all_data]),
 				response(Pid, all_data_resp, get_all()),
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 		{Pid, ask_data, Params} when is_pid(Pid) -> 
 				io:format("[~p]", [ask_data]),
 
@@ -272,7 +279,7 @@ loop(Nodes, TableId, TableName)->
 
 				response(Pid, ask_data_resp, get_all()),
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 
 		{Pid, set_value, Params} when is_pid(Pid) -> 
 				io:format("[~p]", [set_value]),
@@ -284,13 +291,13 @@ loop(Nodes, TableId, TableName)->
 				% end
 				response(Pid, set_value_resp, Res),
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 		{Pid, set_value_ntf, Params} when is_pid(Pid) -> 
 				io:format("[~p]", [set_value]),
 				Res = set_value(TableId, Params),
 				response(Pid, set_value_ntf_resp, Res),
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 
 		{Pid, get_value, Params} when is_pid(Pid) -> 
 				io:format("[~p]", [get_value]),
@@ -305,7 +312,7 @@ loop(Nodes, TableId, TableName)->
 
 				response(Pid, get_value_resp, Res),
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 
 		{Pid, remove_value, Params} when is_pid(Pid) -> 
 				io:format("[~p]", [remove_value]),
@@ -317,13 +324,13 @@ loop(Nodes, TableId, TableName)->
 				% end
 				response(Pid, remove_value_resp, Res),
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 		{Pid, remove_value_ntf, Params} when is_pid(Pid) -> 
 				io:format("[~p]", [remove_value]),
 				Res = remove_value(TableId, Params),
 				response(Pid, remove_value_ntf_resp, Res),
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 
 
 		{Pid, remote_test, Params} when is_pid(Pid) -> 
@@ -336,13 +343,13 @@ loop(Nodes, TableId, TableName)->
 
 				Pid ! {self(), test_resp, ok},
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 
 		{Pid, test, Params} when is_pid(Pid) -> 
 				io:format("[~p]", [test]),
 				Pid ! {self(), test_resp, ok},
 				c:flush(),
-				loop(Nodes, TableId, TableName);
+				loop(Nodes, TableId, TableName, ProcName);
 
 		{Pid, server_stop, Params} when is_pid(Pid) -> 
 				io:format("[~p]", [server_stop]),
@@ -442,6 +449,7 @@ map(F, [H|T]) ->
 map(F, []) ->
 	[].
 
+
 test_()->
 	Pid1 = dictionary:server_run(srv1, some1, myTable1),
 	Pid2 = dictionary:server_run(srv2, some2, myTable2),
@@ -455,14 +463,17 @@ test_()->
 	Node2 = cli_self_node(Pid2),
 	Node3 = cli_self_node(Pid3),
 
+	dictionary:cli_add_node(Pid1, Node1, srv1),
 	dictionary:cli_add_node(Pid1, Node2, srv2),
 	dictionary:cli_add_node(Pid1, Node3, srv3),
 
 	dictionary:cli_add_node(Pid2, Node1, srv1),
+	dictionary:cli_add_node(Pid2, Node2, srv2),
 	dictionary:cli_add_node(Pid2, Node3, srv3),
 
 	dictionary:cli_add_node(Pid3, Node1, srv1),
 	dictionary:cli_add_node(Pid3, Node2, srv2),
+	dictionary:cli_add_node(Pid3, Node3, srv3),
 
 	[{Node2,srv2}, {Node3,srv3}] = cli_get_nodes(Pid1),
 	[{Node1,srv1}, {Node3,srv3}] = cli_get_nodes(Pid2),
@@ -574,7 +585,7 @@ test()->
 
 		FAddNode0 = fun({ProcName0, NodeName0, TableName0, Pid0, Node0})->
 			Res = case Node == Node0 of
-				true -> ok;
+				true -> dictionary:cli_add_node(Pid, Node0, ProcName0);
 				false -> dictionary:cli_add_node(Pid, Node0, ProcName0)
 			end,
 			ok
