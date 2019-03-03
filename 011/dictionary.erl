@@ -474,6 +474,10 @@ test()->
 	dictionary:cli_add_node(Pid3, Node1, srv1),
 	dictionary:cli_add_node(Pid3, Node2, srv2),
 
+	[{Node2,srv2}, {Node3,srv3}] = cli_get_nodes(Pid1),
+	[{Node1,srv1}, {Node3,srv3}] = cli_get_nodes(Pid2),
+	[{Node1,srv1}, {Node2,srv2}] = cli_get_nodes(Pid3),
+
 	dictionary:cli_set_value(Pid1, {'some tag 11', "Address 11"}),
 	dictionary:cli_set_value(Pid1, {'some tag 12', "Address 12"}),
 	dictionary:cli_set_value(Pid1, {'some tag 13', "Address 13"}),
