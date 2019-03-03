@@ -430,33 +430,19 @@ cli_server_stop(Pid)->
 
 %% /Client
 
-test_()->
-	Id = dictionary(myTable),
-	set_value({'some tag 1', "Address 1"}),
-	set_value({'some tag 2', "Address 2"}),
-	set_value({'some tag 3', "Address 3"}),
-	Val1 = get_value('some tag 2'),
-	io:format("[~p]", [Val1]),
-	remove_value('some tag 2'),
-	Val2 = get_value('some tag 2'),
-	io:format("[~p]", [Val2]),
-	
-	%Pid = server_run(srv, Id, myTable),
-	%false = dictionary:cli_is_alive(Pid),
-	%ok = dictionary:cli_start(Pid, some1),
-	%ThisNode = dictionary:cli_self_node(Pid),
-	%true = dictionary:cli_is_alive(Pid),
-
-	%dictionary:add_node('test1'),
-	%dictionary:add_node('test2'),
-	%dictionary:add_node('test3'),
-	%dictionary:remove_node('test2'),
-	%['test1', 'test3'] = dictionary:get_nodes(),
-
-	dictionary_(Id),
+foreach(F, [H|T]) ->
+	F(H),
+	foreach(F, T);
+foreach(F, []) ->
 	ok.
 
-test()->
+
+map(F, [H|T]) ->
+	[F(H)] ++ map(F, T);
+map(F, []) ->
+	[].
+
+test_()->
 	Pid1 = dictionary:server_run(srv1, some1, myTable1),
 	Pid2 = dictionary:server_run(srv2, some2, myTable2),
 	Pid3 = dictionary:server_run(srv3, some3, myTable3),
@@ -537,6 +523,91 @@ test()->
 	dictionary:cli_server_stop(Pid1),
 	dictionary:cli_server_stop(Pid2),
 	dictionary:cli_server_stop(Pid3),
+
+	ok.
+
+test()->
+	Gen1 = fun(Lower, Upper) ->
+		%{A1,A2,A3} = now(),
+		{A1, A2, A3} = random:seed(erlang:phash2([node()]), erlang:monotonic_time(), erlang:unique_integer()),
+		random:seed(A1, A2, A3), 
+		random:uniform(Upper-Lower)+Lower-1
+	end,
+
+	Gen = fun(Lower, Upper, Count) ->
+		%{A1,A2,A3} = now(),
+		{A1, A2, A3} = random:seed(erlang:phash2([node()]), erlang:monotonic_time(), erlang:unique_integer()),
+		random:seed(A1, A2, A3), 
+		[random:uniform(Upper-Lower)+Lower-1 || _ <- lists:seq(1, Count)]
+	end,
+	
+	F1 = fun(Lower, Upper, Count)-> 
+		%lists:map(fun (_) -> random:uniform(Upper-Lower) + Lower end, lists:seq(1,Count))
+		lists:map(fun (_) -> random:uniform(Upper-Lower)+Lower-1 end, lists:seq(1,Count))
+	end,
+
+	Fatom = fun(L)->
+		%list_to_atom(lists:flatten(io_lib:format("zombie~p", [1]))).
+		list_to_atom(lists:flatten(L))
+	end,
+
+	[Count] = F1(1,10,1),
+	
+	MainList = [ {Fatom(io_lib:format("srv~p",[X])), Fatom(io_lib:format("some~p",[X])), Fatom(io_lib:format("myTable~p",[X]))} || X <- lists:seq(1, Count)],
+
+	Frun = fun({ProcName, NodeName, TableName})->
+		Pid = dictionary:server_run(ProcName, NodeName, TableName),
+		Node = dictionary:cli_self_node(Pid),
+		{ProcName, NodeName, TableName, Pid, Node}
+	end,
+
+	MainList2 = map(Frun, MainList),
+
+	TestIsAlive = fun({ProcName, NodeName, TableName, Pid, Node})->
+		true = dictionary:cli_is_alive(Pid),
+		ok
+	end,
+
+	ok = foreach(TestIsAlive, MainList2),
+
+	FAddNode = fun({ProcName, NodeName, TableName, Pid, Node})->
+
+		FAddNode0 = fun({ProcName0, NodeName0, TableName0, Pid0, Node0})->
+			Res = case Node == Node0 of
+				true -> ok;
+				false -> dictionary:cli_add_node(Pid, Node0, ProcName0)
+			end,
+			ok
+		end,
+
+		ok = foreach(FAddNode0, MainList2),
+		ok
+	end,
+	
+	ok = foreach(FAddNode, MainList2),
+	
+	[N] = Gen(1, 1000, 1),
+
+	FAddValue = fun({ProcName, NodeName, TableName, Pid, Node}, X)->
+		dictionary:cli_set_value(Pid, {Fatom(io_lib:format("some tag ~p",[X])), io_lib:format("Address ~p", [X])})
+	end,
+
+	[ FAddValue(lists:nth(Gen1(1, length(MainList2)+1), MainList2), X) || X <- lists:seq(1,N)],
+
+	FCheckValue = fun({ProcName, NodeName, TableName, Pid, Node}, X)->
+		Key = Fatom(io_lib:format("some tag ~p",[X])),
+		Val = io_lib:format("Address ~p", [X]),
+		Val = dictionary:cli_get_value(Pid, Key)
+	end,
+
+	[ FCheckValue(lists:nth(Gen1(1, length(MainList2)+1), MainList2), X) || X <- lists:seq(1,N)],
+
+	SrvStop = fun({ProcName, NodeName, TableName, Pid, Node})->
+		ok = dictionary:cli_server_stop(Pid),
+		ok
+	end,
+
+	ok = foreach(SrvStop, MainList2),
 
 	ok.
 
