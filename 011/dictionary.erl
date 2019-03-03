@@ -1,5 +1,6 @@
 -module(dictionary).
 -export([dictionary/1, loop/3, server_run/3, firestarter/2]).
+-export([cli_server_stop/1]).
 -export([cli_start/2, cli_stop/1, cli_is_alive/1, cli_self_node/1, cli_add_node/3, cli_remove_node/2, cli_get_nodes/1, cli_remote_ping/1, cli_remote/1]). % client
 -export([cli_db_new/1,cli_db_drop/1]).
 -export([cli_set_value/2,cli_get_value/2,cli_remove_value/2, cli_ask_data/1, cli_all_data/1]).
@@ -343,6 +344,14 @@ loop(Nodes, TableId, TableName)->
 				c:flush(),
 				loop(Nodes, TableId, TableName);
 
+		{Pid, server_stop, Params} when is_pid(Pid) -> 
+				io:format("[~p]", [server_stop]),
+				net_kernel:stop(),
+				dictionary_(TableId),
+				Pid ! {self(), server_stop_resp, ok},
+				c:flush(),
+				ok;
+
 		%{signal, Pid} -> signal;
 		%{'EXIT', Pid, Reason} -> exit;
 		%{nodedown, Node} -> {error, node_down};
@@ -415,6 +424,9 @@ cli_ask_data(Pid)->
 
 cli_all_data(Pid)->
 	call(Pid, all_data, null).
+
+cli_server_stop(Pid)->
+	call(Pid, server_stop, null).
 
 %% /Client
 
@@ -513,6 +525,10 @@ test()->
 	"Address 12" = dictionary:cli_get_value(Pid3, 'some tag 12'),
 	"Address 13" = dictionary:cli_get_value(Pid2, 'some tag 13'),
 	"Address 31" = dictionary:cli_get_value(Pid1, 'some tag 31'),
+
+	dictionary:cli_server_stop(Pid1),
+	dictionary:cli_server_stop(Pid2),
+	dictionary:cli_server_stop(Pid3),
 
 	ok.
 
