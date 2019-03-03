@@ -5,6 +5,7 @@
 -export([cli_db_new/1,cli_db_drop/1]).
 -export([cli_set_value/2,cli_get_value/2,cli_remove_value/2, cli_ask_data/1, cli_all_data/1]).
 -export([test/0]).
+-export([start_auto/1, test_auto/1]).
 -vsv(0.1).
 
 dictionary(Tablename)->
@@ -622,42 +623,81 @@ test()->
 
 	ok.
 
+start_auto(N)->
+	Fatom = fun(L)->
+		%list_to_atom(lists:flatten(io_lib:format("zombie~p", [1]))).
+		list_to_atom(lists:flatten(L))
+	end,
+
+	ProcName = Fatom(io_lib:format("srv~p",[N])),
+	NodeName = Fatom(io_lib:format("some~p",[N])),
+	TableName = Fatom(io_lib:format("myTable~p",[N])),
+
+	Pid = dictionary:server_run(ProcName, NodeName, TableName),
+	Node = dictionary:cli_self_node(Pid),
+
+	{Pid, ProcName, Node}.
+
+test_auto(Nodes)->
+	Fatom = fun(L)->
+		%list_to_atom(lists:flatten(io_lib:format("zombie~p", [1]))).
+		list_to_atom(lists:flatten(L))
+	end,
+
+	Gen1 = fun(Lower, Upper) ->
+		%{A1,A2,A3} = now(),
+		{A1, A2, A3} = random:seed(erlang:phash2([node()]), erlang:monotonic_time(), erlang:unique_integer()),
+		random:seed(A1, A2, A3),
+		random:uniform(Upper-Lower)+Lower-1
+	end,
+
+	Gen = fun(Lower, Upper, Count) ->
+		{A1,A2,A3} = now(),
+		%{A1, A2, A3} = random:seed(erlang:phash2([node()]), erlang:monotonic_time(), erlang:unique_integer()),
+		random:seed(A1, A2, A3),
+		[random:uniform(Upper-Lower)+Lower-1 || _ <- lists:seq(1, Count)]
+	end,
+
+	[N] = Gen(1, 1000, 1),
+
+	FAddValue = fun({Node,Proc}, X)->
+		Key = Fatom(io_lib:format("some tag ~p",[X])),
+		Value = io_lib:format("Address ~p", [X]),
+		remote_call(Proc, Node, set_value, {Key, Value})
+	end,
+
+	[ FAddValue(lists:nth(Gen1(1, length(Nodes)+1), Nodes), X) || X <- lists:seq(1,N)],
+
+	FCheckValue = fun({Node,Proc}, X)->
+		Key = Fatom(io_lib:format("some tag ~p",[X])),
+		Val = io_lib:format("Address ~p", [X]),
+		Val = remote_call(Proc, Node, get_value, Key),
+		ok
+	end,
+
+	[ FCheckValue(lists:nth(Gen1(1, length(Nodes)+1), Nodes), X) || X <- lists:seq(1,N)],
+
+	ok.
+
 % sudo hostname myserver.mydomainname.com
 % epmd -daemon
 % "127.0.0.1 hostname myserver.mydomainname.com" > /stc/hosts
 
+% erl -name somenode -sname snode -connect_all false
+
 % c(dictionary).
 % dictionary:test().
 %
-% Id = dictionary:dictionary().
-% Pid = dictionary:server_run(srv, Id, myTable).
-% Pid = dictionary:server_run(srv, null, null).
+%#1 {Pid, Proc, Node} = dictionary:start_auto(1).
+%#2 {Pid, Proc, Node} = dictionary:start_auto(2).
+%#3 {Pid, Proc, Node} = dictionary:start_auto(3).
 %
-% dictionary:cli_db_new(Pid).
-% dictionary:cli_db_drop(Pid).
-% dictionary:cli_db_new(Pid).
+%#* dictionary:cli_add_node(Pid, 'some1@myserver.mydomainname.com', 'srv1').
+%#* dictionary:cli_add_node(Pid, 'some2@myserver.mydomainname.com', 'srv2').
+%#* dictionary:cli_add_node(Pid, 'some3@myserver.mydomainname.com', 'srv3').
 %
-% false = dictionary:cli_is_alive(Pid).
-% ok = dictionary:cli_start(Pid, some1).
-% ThisNode = dictionary:cli_self_node(Pid).
-% true = dictionary:cli_is_alive(Pid).
-%
-% dictionary:cli_set_value(Pid, {'some tag 1', "Address 1"}).
-% dictionary:cli_set_value(Pid, {'some tag 2', "Address 2"}).
-% dictionary:cli_set_value(Pid, {'some tag 3', "Address 3"}).
-% dictionary:cli_get_value(Pid, 'some tag 2').
-% dictionary:cli_remove_value(Pid, 'some tag 2').
-% dictionary:cli_get_value(Pid, 'some tag 2').
-%
-%
-% dictionary:cli_remote_ping(Pid).
-%
-% dictionary:cli_add_node(Pid, 'some2@localhost.localdomain').
-% dictionary:cli_add_node(Pid, 'some1@localhost.localdomain').
-% dictionary:cli_remote(Pid).
+%#4 net_kernel:start([test]).
+%#4 erlang:set_cookie(node(), test_cookie_value).
+%#4 Nodes = [{'some1@myserver.mydomainname.com', 'srv1'}, {'some2@myserver.mydomainname.com', 'srv2'}, {'some3@myserver.mydomainname.com', 'srv3'}].
+%#4 dictionary:test_auto(Nodes).
 
-% dictionary:cli_add_node(Pid, 'some1@myserver.mydomainname.com').
-% dictionary:cli_add_node(Pid, 'some2@myserver.mydomainname.com').
-% dictionary:cli_add_node(Pid, 'some3@myserver.mydomainname.com').
-
-% erl -name somenode -sname snode -connect_all false
