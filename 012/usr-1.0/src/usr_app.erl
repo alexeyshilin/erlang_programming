@@ -24,3 +24,6 @@ stop(_State) ->
 %
 % systools:make_script("usr", [local]).
 %
+% ls().
+
+% erl -boot usr
