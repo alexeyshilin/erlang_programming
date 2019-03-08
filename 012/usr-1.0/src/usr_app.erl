@@ -27,3 +27,6 @@ stop(_State) ->
 % ls().
 
 % erl -boot usr
+
+%% usr.script -> usr.boot
+% systools:script2boot("usr").
