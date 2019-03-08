@@ -21,3 +21,6 @@ stop(_State) ->
 % whereis(usr_sup).
 %
 % appmon:start()
+%
+% systools:make_script("usr", [local]).
+%
