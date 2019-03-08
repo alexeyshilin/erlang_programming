@@ -12,8 +12,13 @@
 
 %% Экспортируемые клиентские функции
 %% API эксплуатации и технического обслуживания сервера
+
+%start_link() ->
+%	start_link("usrDb").
+
 start_link() ->
-	start_link("usrDb").
+	{ok, FileName} = application:get_env(dets_name),
+	start_link(FileName).
 
 start_link(FileName) ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, FileName, []).
