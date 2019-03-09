@@ -8,8 +8,8 @@ start_link() ->
 	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init(Data) ->
-	Chld = { my_db_gen, {my_db_gen, start, []}, permanent, 2000, worker, [my_db_gen] } ,
-	{ok, {{one_for_all, 1, 1}, [Chld]}}.
+	Chld = { my_db_gen, {my_db_gen, start, []}, permanent, 30*1000, worker, [my_db_gen] } ,
+	{ok, {{one_for_all, 5, 60*60}, [Chld]}}.
 	%Response:
 	% {ok, {SupervisorSpecification, ChildSpecificationList}}
 		% SupervisorSpecification = {RestartStrategy, AllowedRestarts, MaxSeconds}
