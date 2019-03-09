@@ -17,3 +17,11 @@ stop(_State) ->
 % my_db_gen:read(foo).
 %
 % application:get_env(my_db, data).
+%
+% application:which_applications().
+%
+% application:get_env(my_db, data).
+% application:get_all_env(my_db).
+%
+% application:get_env(data).
+% application:get_all_env().
