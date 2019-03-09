@@ -25,3 +25,14 @@ stop(_State) ->
 %
 % application:get_env(data).
 % application:get_all_env().
+
+% appmon:start(). % !!!obsolete!!!
+% observer:start().
+
+% systools:make_script("my_db", [local]). %ok
+% systools:make_script("my_db", {path, ["mydb-1.0/ebin"]}). % err
+% systools:make_script("my_db", {dir, ["mydb-1.0/ebin"]}). % err
+
+% systools:script2boot("my_db").
+
+% erl -boot my_db

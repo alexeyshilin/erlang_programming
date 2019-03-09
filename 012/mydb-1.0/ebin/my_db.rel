@@ -1,0 +1,4 @@
+{release, {"DB Service","R1"}, {erts, "5.6.2"},
+[{kernel,"5.2"},
+{stdlib,"3.3"},
+{my_db,"1.0"}]}.
