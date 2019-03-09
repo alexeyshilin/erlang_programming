@@ -2,7 +2,7 @@
 -export([test/0]).
 -export([start_link/0, start_link/1, stop/0]).
 -export([init/1, terminate/2, handle_call/3, handle_cast/2]).
--export([start/0, stop/0, write/2, delete/1, read/1, match/1]).
+-export([start/0, start/1, stop/0, write/2, delete/1, read/1, match/1]).
 -behavior(genserver).
 
 
@@ -157,12 +157,14 @@ handle_call(stub, From, LoopData) ->
 % Tests
 
 test()->
-	{ok, Pid} = my_db_gen:start(),
+	{ok, Pid} = my_db_gen:start([{test, test_val}]),
+	{ok, test_val} = my_db_gen:read(test),
 	{ok} = my_db_gen:write(foo, bar),
 	{error, instance} = my_db_gen:read(baz),
 	{ok, bar} = my_db_gen:read(foo),
 	[foo] = my_db_gen:match(bar),
 	ok = stop(),
+
 	ok.
 
 % /Tests
