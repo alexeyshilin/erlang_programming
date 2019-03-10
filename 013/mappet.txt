@@ -1,0 +1,21 @@
+mkdir test_node1
+mkdir test_node2
+
+#1 foo																														#2 bar
+cd test_node1																												cd test_node2
+erl -sname foo																												erl -sname bar
+rd(muppet, {name, callsign,salary}).
+% mnesia:create_schema([foo@localhost, bar@localhost]).
+mnesia:create_schema([foo@myserver, bar@myserver]).
+application:start(mnesia).																									application:start(mnesia).
+% mnesia:create_table(muppet, [{attributes, record_info(fields, muppet)}, {disc_copies, [foo@localhost, bar@localhost]}]).
+mnesia:create_table(muppet, [{attributes, record_info(fields, muppet)}, {disc_copies, [foo@myserver, bar@myserver]}]).
+mnesia:info().																												mnesia:info().
+mnesia:dirty_write(#muppet{name="Francesco", callsign="HuluHuluHulu", salary = 0}).
+mnesia:table_info(muppet, size).																							mnesia:table_info(muppet, size).
+mnesia:dirty_all_keys(muppet).
+																															mnesia:dirty_read({muppet, "Francesco"}).
+																															rd(muppet, {name, callsign,salary}).
+																															mnesia:dirty_write(#muppet{name="muppet2", callsign="MupPet 2", salary = 100}).
+																															mnesia:dirty_write(#muppet{name="muppet3", callsign="MupPet 3", salary = 200}).
+mnesia:dirty_read({muppet, "muppet2"}).
