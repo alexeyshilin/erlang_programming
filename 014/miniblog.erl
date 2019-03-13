@@ -111,8 +111,10 @@ dateNow()->
 	StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0wT~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])),
 	StrTime.
 
-lastLineRange(Text)->
-	{0,0}.
+lastLineRange(T) ->
+	S = wxTextCtrl:xYToPosition(T,0,wxTextCtrl:getNumberOfLines(T)-1),
+	F = wxTextCtrl:getLastPosition(T),
+	{S,F}.
 
 % c(miniblog).
 %
