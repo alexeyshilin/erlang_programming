@@ -72,7 +72,7 @@ get_index(CustId) ->
 	end.
 
 restore_backup() ->
-	ok = mnesia:wait_for_tables([usr], 1000).
+	ok = mnesia:wait_for_tables([usr], 3000).
 
 delete_disabled() ->
 	% fixtable ???
