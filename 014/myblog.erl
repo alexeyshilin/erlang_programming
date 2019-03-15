@@ -12,6 +12,8 @@
 -define(OPEN, 133).
 -define(SAVE, 134).
 -define(NEW, 135).
+-define(OPENFILE, 136).
+-define(SAVEAS, 137).
 
 %% Основная функция: запускает wx-server, создаёт графические объекты,
 %% выводит на экран приложения и обрабатывает запрос на завершение
@@ -23,7 +25,7 @@ start() ->
 	Text = wxTextCtrl:new(Frame, ?wxID_ANY, [{value,"MyBlog"}, {style,?wxTE_MULTILINE}]),
 	setup(WX,Frame,Text),
 	wxFrame:show(Frame),
-	loop(Frame,Text),
+	loop(Frame,Text,"BLOG"),
 	wx:destroy().
 
 %% Фрэйм: создаёт панель меню, два подменю, два элемента меню
@@ -42,8 +44,10 @@ setup(WX, Frame, Text) ->
 	
 	wxMenu:append(File,?NEW,"New\tCtrl-N"),
 	wxMenu:append(File,?OPEN,"Open saved\tCtrl-0" ) ,
+	wxMenu:append(File,?OPENFILE,"Open file\tCtrl-o" ) ,
 	wxMenu:appendSeparator(File),
 	wxMenu:append(File,?SAVE,"Save\tCtrl-S"),
+	wxMenu:append(File,?SAVEAS,"Save as\tCtrl-S"),
 	wxMenu:append(Edit,?APPEND,"Add en&try\tCtrl-T" ) ,
 	wxMenu:append(Edit,?UNDO,"Undo latest\tCtrl-U" ) ,
 	wxMenuBar:append(MenuBar,Edit,"&Edit"),
@@ -59,7 +63,7 @@ setup(WX, Frame, Text) ->
 	wxFrame:connect(Frame, close_window,  [{skip, true}]),
 	ok.
 
-loop(Frame,Text) ->
+loop(Frame,Text, Filepath) ->
 	receive
 
 		#wx{event=#wxClose{type=close_window}} ->
@@ -72,7 +76,7 @@ loop(Frame,Text) ->
 			MD = wxMessageDialog:new(Frame,Str, [{style, ?wxOK bor ?wxICON_INFORMATION}, {caption, "About MyBlog"}]),
 			wxDialog:showModal(MD),
 			wxDialog:destroy(MD),
-			loop(Frame,Text);
+			loop(Frame,Text,Filepath);
 
 		#wx{id=?EXIT, event=#wxCommand{type=command_menu_selected}} ->
 			io:format("[exit]"),
@@ -91,29 +95,57 @@ loop(Frame,Text) ->
 
 			wxDialog:destroy(MD),
 
-			loop(Frame,Text);
+			loop(Frame,Text,Filepath);
 
 		#wx{id=?UNDO, event=#wxCommand{type=command_menu_selected}} ->
 			{StartPos,EndPos} = lastLineRange(Text),
 			wxTextCtrl:remove(Text,StartPos-2,EndPos+1),
-			loop(Frame,Text);
+			loop(Frame,Text,Filepath);
 
 		#wx{id=?OPEN, event=#wxCommand{type=command_menu_selected}} ->
-			wxTextCtrl:loadFile(Text,"BLOG"),
-			loop(Frame,Text);
+			Filepath = "BLOG",
+			wxTextCtrl:loadFile(Text,Filepath),
+			loop(Frame,Text,Filepath);
+
+		#wx{id=?OPENFILE, event=#wxCommand{type=command_menu_selected}} ->
+			FD = wxFileDialog:new(Frame),
+			SelectedFile = case wxFileDialog:showModal(FD) of
+				?wxID_OK ->
+					wxFileDialog:getPath(FD);
+				_ -> ok
+			end,
+			wxFileDialog:destroy(FD),
+
+			io:format("[~p]", [SelectedFile]),
+			wxTextCtrl:loadFile(Text, SelectedFile),
+
+			loop(Frame,Text,SelectedFile);
 
 		#wx{id=?SAVE, event=#wxCommand{type=command_menu_selected}} ->
-			wxTextCtrl:saveFile(Text,[{file,"BLOG"}]),
-			loop(Frame,Text);
+			wxTextCtrl:saveFile(Text,[{file,Filepath}]),
+			loop(Frame,Text,Filepath);
+
+		#wx{id=?SAVEAS, event=#wxCommand{type=command_menu_selected}} ->
+			FD = wxFileDialog:new(Frame),
+			SelectedFile = case wxFileDialog:showModal(FD) of
+				?wxID_OK ->
+					wxFileDialog:getPath(FD);
+				_ -> ok
+			end,
+			wxFileDialog:destroy(FD),
+
+			wxTextCtrl:saveFile(Text,[{file,SelectedFile}]),
+
+			loop(Frame,Text,Filepath);
 
 		#wx{id=?NEW, event=#wxCommand{type=command_menu_selected}} ->
 			{_,EndPos} = lastLineRange(Text),
 			StartPos = wxTextCtrl:xYToPosition(Text,0,0),
 			wxTextCtrl:replace(Text,StartPos,EndPos,"MyBlog"),
-			loop(Frame,Text);
+			loop(Frame,Text,Filepath);
 		Any ->
 			io:format("[~p]", [Any]),
-			loop(Frame,Text)
+			loop(Frame,Text,Filepath)
 	end.
 
 dateNow()->
