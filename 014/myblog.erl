@@ -56,10 +56,16 @@ setup(WX, Frame, Text) ->
 	wxTextCtrl:setEditable(Text,false),
 
 	wxFrame:connect(Frame, command_menu_selected),
-	wxFrame:connect(Frame, close_window).
+	wxFrame:connect(Frame, close_window,  [{skip, true}]),
+	ok.
 
 loop(Frame,Text) ->
 	receive
+
+		#wx{event=#wxClose{type=close_window}} ->
+			io:format("[quit icon]"),
+			%wxWindow:close(Frame,[]),
+			wxFrame:destroy(Frame);
 
 		#wx{id=?ABOUT, event=#wxCommand{}} ->
 			Str = "MyBlog is a minimal WxErlang example.",
