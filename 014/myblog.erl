@@ -104,6 +104,9 @@ loop(Frame,Text) ->
 			{_,EndPos} = lastLineRange(Text),
 			StartPos = wxTextCtrl:xYToPosition(Text,0,0),
 			wxTextCtrl:replace(Text,StartPos,EndPos,"MyBlog"),
+			loop(Frame,Text);
+		Any ->
+			io:format("[~p]", [Any]),
 			loop(Frame,Text)
 	end.
 
