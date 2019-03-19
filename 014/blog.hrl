@@ -1,0 +1,1 @@
+-record(post, {id, stamp_created, stamp_last, message, status = enabled}).

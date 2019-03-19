@@ -3,6 +3,8 @@
 -module(myblog).
 -compile(export_all).
 
+-include("blog.hrl").
+
 -include_lib("wx/include/wx.hrl").
 
 -define(ABOUT,?wxID_ABOUT).
@@ -25,7 +27,7 @@ start() ->
 	Text = wxTextCtrl:new(Frame, ?wxID_ANY, [{value,"MyBlog"}, {style,?wxTE_MULTILINE}]),
 	setup(WX,Frame,Text),
 	wxFrame:show(Frame),
-	loop(Frame,Text,"BLOG"),
+	loop(Frame,Text,"BLOG", null, []),
 	wx:destroy().
 
 %% Фрэйм: создаёт панель меню, два подменю, два элемента меню
@@ -47,7 +49,7 @@ setup(WX, Frame, Text) ->
 	wxMenu:append(File,?OPENFILE,"Open file\tCtrl-o" ) ,
 	wxMenu:appendSeparator(File),
 	wxMenu:append(File,?SAVE,"Save\tCtrl-S"),
-	wxMenu:append(File,?SAVEAS,"Save as\tCtrl-S"),
+	%wxMenu:append(File,?SAVEAS,"Save as\tCtrl-S"),
 	wxMenu:append(Edit,?APPEND,"Add en&try\tCtrl-T" ) ,
 	wxMenu:append(Edit,?UNDO,"Undo latest\tCtrl-U" ) ,
 	wxMenuBar:append(MenuBar,Edit,"&Edit"),
@@ -63,11 +65,47 @@ setup(WX, Frame, Text) ->
 	wxFrame:connect(Frame, close_window,  [{skip, true}]),
 	ok.
 
-loop(Frame,Text, Filepath) ->
+is_file_exists(Filename)->
+	case file:read_file_info(Filename) of
+		{ok, FileInfo} -> true;
+		{error, Reason} -> false
+	end.
+
+data_as_text([])->
+	"";
+
+data_as_text([H|[]])->
+	{Id,Date,Message} = H,
+	date(Date) ++ " " ++ Message ++ "\n";
+
+data_as_text([H|T])->
+	{Id,Date,Message} = H,
+	date(Date) ++ " " ++ Message ++ "\n" ++ data_as_text(T);
+
+data_as_text(Any)->
+	{error, data_as_text}.
+
+save_new_posts(Db, [])->
+	ok;
+
+save_new_posts(Db, [H|[]])->
+	{Id,Stamp,Message} = H,
+	blog_db:add_item(Db, Message, Stamp);
+
+save_new_posts(Db, [H|T])->
+	{Id,Stamp,Message} = H,
+	blog_db:add_item(Db, Message, Stamp),
+	save_new_posts(Db, T);
+
+save_new_posts(Db, Any)->
+	{error, save_new_posts}.
+
+loop(Frame,Text, Filepath, Db, Posts) ->
 	receive
 
 		#wx{event=#wxClose{type=close_window}} ->
 			io:format("[quit icon]"),
+			blog_db:close(Db),
 			%wxWindow:close(Frame,[]),
 			wxFrame:destroy(Frame);
 
@@ -76,10 +114,11 @@ loop(Frame,Text, Filepath) ->
 			MD = wxMessageDialog:new(Frame,Str, [{style, ?wxOK bor ?wxICON_INFORMATION}, {caption, "About MyBlog"}]),
 			wxDialog:showModal(MD),
 			wxDialog:destroy(MD),
-			loop(Frame,Text,Filepath);
+			loop(Frame,Text,Filepath, Db, Posts);
 
 		#wx{id=?EXIT, event=#wxCommand{type=command_menu_selected}} ->
 			io:format("[exit]"),
+			blog_db:close(Db),
 			wxWindow:close(Frame,[]);
 
 		#wx{id=?APPEND, event=#wxCommand{type=command_menu_selected}} ->
@@ -89,23 +128,37 @@ loop(Frame,Text, Filepath) ->
 			case wxTextEntryDialog:showModal(MD) of
 				?wxID_OK ->
 					Str = wxTextEntryDialog:getValue(MD),
-					wxTextCtrl:appendText(Text,[10]++dateNow()++Str);
-				_ -> ok
+					%blog_db:add_item(Db, Str),
+					%Now = calendar:now_to_datetime(erlang:now()),
+					Now = blog_db:unixtime(),
+					NewPosts = Posts ++ [{0, Now, Str}],
+					wxTextCtrl:appendText(Text,[10]++dateNow()++" "++Str);
+				_ -> NewPosts = Posts, ok
 			end,
 
 			wxDialog:destroy(MD),
 
-			loop(Frame,Text,Filepath);
+			loop(Frame,Text,Filepath, Db, NewPosts);
 
 		#wx{id=?UNDO, event=#wxCommand{type=command_menu_selected}} ->
 			{StartPos,EndPos} = lastLineRange(Text),
 			wxTextCtrl:remove(Text,StartPos-2,EndPos+1),
-			loop(Frame,Text,Filepath);
+			loop(Frame,Text,Filepath, Db, Posts);
 
 		#wx{id=?OPEN, event=#wxCommand{type=command_menu_selected}} ->
 			Filepath = "BLOG",
-			wxTextCtrl:loadFile(Text,Filepath),
-			loop(Frame,Text,Filepath);
+			%wxTextCtrl:loadFile(Text,Filepath),
+
+			{ok, Ref} = case is_file_exists(Filepath) of
+						true -> blog_db:open(Filepath);
+						false -> blog_db:create(Filepath), blog_db:open(Filepath)
+					end,
+
+			Data = blog_db:get_simple(Ref),
+			TextData = data_as_text(Data),
+			wxTextCtrl:changeValue(Text, TextData),
+
+			loop(Frame,Text,Filepath, Ref, Posts);
 
 		#wx{id=?OPENFILE, event=#wxCommand{type=command_menu_selected}} ->
 			FD = wxFileDialog:new(Frame),
@@ -117,13 +170,23 @@ loop(Frame,Text, Filepath) ->
 			wxFileDialog:destroy(FD),
 
 			io:format("[~p]", [SelectedFile]),
-			wxTextCtrl:loadFile(Text, SelectedFile),
+			%wxTextCtrl:loadFile(Text, SelectedFile),
 
-			loop(Frame,Text,SelectedFile);
+			{ok, Ref} = case is_file_exists(SelectedFile) of
+						true -> blog_db:open(SelectedFile);
+						false -> blog_db:create(SelectedFile), blog_db:open(SelectedFile)
+					end,
+
+			Data = blog_db:get_simple(Ref),
+			TextData = data_as_text(Data),
+			wxTextCtrl:changeValue(Text, TextData),
+
+			loop(Frame,Text,SelectedFile, Ref, Posts);
 
 		#wx{id=?SAVE, event=#wxCommand{type=command_menu_selected}} ->
-			wxTextCtrl:saveFile(Text,[{file,Filepath}]),
-			loop(Frame,Text,Filepath);
+			%wxTextCtrl:saveFile(Text,[{file,Filepath}]),
+			save_new_posts(Db, Posts),
+			loop(Frame,Text,Filepath, Db, Posts);
 
 		#wx{id=?SAVEAS, event=#wxCommand{type=command_menu_selected}} ->
 			FD = wxFileDialog:new(Frame),
@@ -136,16 +199,16 @@ loop(Frame,Text, Filepath) ->
 
 			wxTextCtrl:saveFile(Text,[{file,SelectedFile}]),
 
-			loop(Frame,Text,Filepath);
+			loop(Frame,Text,Filepath, Db, Posts);
 
 		#wx{id=?NEW, event=#wxCommand{type=command_menu_selected}} ->
 			{_,EndPos} = lastLineRange(Text),
 			StartPos = wxTextCtrl:xYToPosition(Text,0,0),
 			wxTextCtrl:replace(Text,StartPos,EndPos,"MyBlog"),
-			loop(Frame,Text,Filepath);
+			loop(Frame,Text,Filepath, Db, Posts);
 		Any ->
 			io:format("[~p]", [Any]),
-			loop(Frame,Text,Filepath)
+			loop(Frame,Text,Filepath, Db, Posts)
 	end.
 
 dateNow()->
