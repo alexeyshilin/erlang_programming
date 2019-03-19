@@ -149,7 +149,10 @@ loop(Frame,Text, Filepath) ->
 	end.
 
 dateNow()->
-	{{Year, Month, Day}, {Hour, Minute, Second}} = calendar:now_to_datetime(erlang:now()),
+	Now = calendar:now_to_datetime(erlang:now()),
+	date(Now).
+
+date({{Year, Month, Day}, {Hour, Minute, Second}})->
 	StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0wT~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])),
 	StrTime.
 
