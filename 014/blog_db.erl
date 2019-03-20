@@ -46,7 +46,7 @@ datetime2unixstamp( {{Y,M,D},{Hr,Min,Sec}} = DT )->
 	DtSec = calendar:datetime_to_gregorian_seconds(DT),
 	DtSec - UnixSec.
 
-gen_id(Suf) when is_integer(Suf) and (Suf >= 100) and (Suf =< 999) ->
+gen_id(Suf) when is_integer(Suf), (Suf >= 100), (Suf =< 999) ->
 	%2000-01-01 00:00:00
 	%946684800
 	M = erlang:system_time(microsecond),
