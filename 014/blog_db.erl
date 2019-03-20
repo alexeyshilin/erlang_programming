@@ -1,6 +1,6 @@
 -module(blog_db).
 -include("blog.hrl").
--export([unixtime/0, unixtime/1, unixtime2timestamp/1, timestamp2datetime/1, timestamp/0, get_timestamp/0, micro2timestamp/1, micro2timestamp/1, datetime2unixstamp/1]).
+-export([unixtime/0, unixtime/1, unixtime2timestamp/1, timestamp2datetime/1, timestamp/0, get_timestamp/0, micro2timestamp/1, micro2timestamp/1, datetime2unixstamp/1, gen_id/1]).
 -export([create/1, open/1, close/1]).
 -export([add_item/2, add_item/3, delete_item/2, lookup_item/2, update_item/2, update_item/3]).
 -export([lookup_free/1, get_all/1, get_simple/1]).
@@ -45,6 +45,13 @@ datetime2unixstamp( {{Y,M,D},{Hr,Min,Sec}} = DT )->
 	UnixSec = 62167219200,
 	DtSec = calendar:datetime_to_gregorian_seconds(DT),
 	DtSec - UnixSec.
+
+gen_id(Suf) when is_integer(Suf) and (Suf >= 100) and (Suf =< 999) ->
+	%2000-01-01 00:00:00
+	%946684800
+	M = erlang:system_time(microsecond),
+	R = trunc(M - 946684800*1000000 + random:uniform() * 1000),
+	R * 1000 + Suf.
 
 create(Filename)->
 	dets:open_file(tmp, [{file, Filename}, {keypos, #post.id}]), % {ok, Name} | {error, Reason}
