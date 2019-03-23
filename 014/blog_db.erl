@@ -73,16 +73,17 @@ close(Ref) ->
 
 
 
-add_item(Ref, #post{id=Id, message=Message} = BlogPost)->
+add_item(Ref, #post{id=Id, message=Message, stamp_created=DateTime} = BlogPost)->
+	io:format("[save: ~p]", [BlogPost]),
 	case lookup_item(Ref, Id) of
-		[] -> dets:insert(Ref, BlogPost#post{id=Id, stamp_created=unixtime(), stamp_last=unixtime(), message=Message});
+		[] -> dets:insert(Ref, BlogPost#post{id=Id, stamp_created=DateTime, stamp_last=unixtime(), message=Message});
 		_ -> {error, already_exists}
 	end;
 
 add_item(Ref, Message)->
 	%Id = lookup_free(Ref),
 	Id = gen_id(),
-	case add_item(Ref, #post{id=Id, message=Message}) of 
+	case add_item(Ref, #post{id=Id, message=Message, stamp_created=unixtime()}) of
 		ok -> {ok, Id};
 		{error, Reason} -> {error, Reason}
 	end.
@@ -180,6 +181,7 @@ smplefy(Any)->
 % blog_db:get_simple(T1).
 % blog_db:lookup_free(T1).
 % blog_db:add_item(T1, "Test message!").
+% blog_db:add_item(T1, "Test message 2!", blog_db:unixtime()).
 % blog_db:lookup_item(T1, 2).
 % blog_db:update_item(T1, 2, "Test message!").
 % blog_db:delete_item(T1, 1).
