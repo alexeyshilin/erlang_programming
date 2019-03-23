@@ -57,7 +57,7 @@ start() ->
 	%wxWindow:setSize(Win1, {H, W}),
 	wxNotebook:addPage(Notebook, Win1, "Tab one", []),
 
-	Text = wxTextCtrl:new(Win1, ?wxID_ANY, [{value,"MyBlog"}, {style,?wxTE_MULTILINE}, {size, {300,200}}]),
+	Text = wxHtmlWindow:new(Win1, [{id, ?wxID_ANY}, {style,?wxTE_MULTILINE}, {size, {300,200}}]),
 
 	Tabs = [{Win1, Text, "BLOG", null, []}], % win text filename db posts
 
@@ -101,7 +101,7 @@ setup(WX, Frame, Text, Notebook) ->
 	wxFrame:createStatusBar(Frame),
 	wxFrame:setStatusText(Frame,"Welcome to wxErlang"),
 
-	wxTextCtrl:setEditable(Text,false),
+	%wxHtmlWindow:setEditable(Text,false),
 
 	wxFrame:connect(Frame, command_menu_selected),
 	wxFrame:connect(Frame, close_window,  [{skip, true}]),
@@ -212,7 +212,7 @@ loop(Frame,Text, Filepath, Db, Posts, Notebook, Tabs) ->
 
 		#wx{id=?APPEND, event=#wxCommand{type=command_menu_selected}} ->
 			Prompt = "Please enter text here.",
-			MD = wxTextEntryDialog:new(Frame,Prompt, [{caption, "New blog entry"}]),
+			MD = wxTextEntryDialog:new(Frame,Prompt, [{caption, "New blog entry"}, {style, ?wxTE_MULTILINE bor ?wxOK bor ?wxCANCEL bor ?wxDEFAULT_DIALOG_STYLE bor ?wxRESIZE_BORDER}]), % ?wxOK | ?wxCANCEL | ?wxTE_MULTILINE
 			
 			N = wxNotebook:getSelection(Notebook),
 			{WinCur, TextCur, FilepathCur, DbRefCur, PostsCur} = get_tab_data(Tabs, N, 0),
@@ -224,7 +224,7 @@ loop(Frame,Text, Filepath, Db, Posts, Notebook, Tabs) ->
 					%Now = calendar:now_to_datetime(erlang:now()),
 					Now = blog_db:unixtime(),
 					NewPosts = PostsCur ++ [{0, Now, Str}],
-					wxTextCtrl:appendText(TextCur,[10]++dateNow()++" "++Str),
+					wxHtmlWindow:appendToPage(TextCur,[10]++dateNow()++" "++Str),
 
 					NewTab = {WinCur, TextCur, FilepathCur, DbRefCur, NewPosts},
 					NewTabs = set_tab_data(Tabs, N, 0, NewTab),
@@ -239,12 +239,12 @@ loop(Frame,Text, Filepath, Db, Posts, Notebook, Tabs) ->
 
 		#wx{id=?UNDO, event=#wxCommand{type=command_menu_selected}} ->
 			{StartPos,EndPos} = lastLineRange(Text),
-			wxTextCtrl:remove(Text,StartPos-2,EndPos+1),
+			wxHtmlWindow:remove(Text,StartPos-2,EndPos+1),
 			loop(Frame,Text,Filepath, Db, Posts, Notebook, Tabs);
 
 		#wx{id=?OPEN, event=#wxCommand{type=command_menu_selected}} ->
 			Filepath = "BLOG",
-			%wxTextCtrl:loadFile(Text,Filepath),
+			%wxHtmlWindow:loadFile(Text,Filepath),
 
 			{ok, Ref} = case is_file_exists(Filepath) of
 						true -> blog_db:open(Filepath);
@@ -253,7 +253,7 @@ loop(Frame,Text, Filepath, Db, Posts, Notebook, Tabs) ->
 
 			Data = blog_db:get_simple(Ref),
 			TextData = data_as_text(Data),
-			wxTextCtrl:changeValue(Text, TextData),
+			wxHtmlWindow:changeValue(Text, TextData),
 
 			loop(Frame,Text,Filepath, Ref, Posts, Notebook, Tabs);
 
@@ -267,7 +267,7 @@ loop(Frame,Text, Filepath, Db, Posts, Notebook, Tabs) ->
 			wxFileDialog:destroy(FD),
 
 			io:format("[~p]", [SelectedFile]),
-			%wxTextCtrl:loadFile(Text, SelectedFile),
+			%wxHtmlWindow:loadFile(Text, SelectedFile),
 
 			{ok, Ref} = case is_file_exists(SelectedFile) of
 						true -> blog_db:open(SelectedFile);
@@ -281,7 +281,7 @@ loop(Frame,Text, Filepath, Db, Posts, Notebook, Tabs) ->
 			{WinCur, TextCur, FilepathCur, DbRefCur, PostsCur} = get_tab_data(Tabs, N, 0),
 			NewTabs = set_tab_data(Tabs, N, 0, {WinCur, TextCur, FilepathCur, Ref, PostsCur}),
 
-			wxTextCtrl:changeValue(TextCur, TextData),
+			wxHtmlWindow:setPage(TextCur, TextData),
 
 			loop(Frame,Text,SelectedFile, Ref, Posts, Notebook, NewTabs);
 
@@ -304,7 +304,7 @@ loop(Frame,Text, Filepath, Db, Posts, Notebook, Tabs) ->
 			loop(Frame,Text,Filepath, Db, Posts, Notebook, Tabs);
 
 		#wx{id=?SAVE, event=#wxCommand{type=command_menu_selected}} ->
-			%wxTextCtrl:saveFile(Text,[{file,Filepath}]),
+			%wxHtmlWindow:saveFile(Text,[{file,Filepath}]),
 
 			N = wxNotebook:getSelection(Notebook),
 			{WinCur, TextCur, FilepathCur, DbRefCur, PostsCur} = get_tab_data(Tabs, N, 0),
@@ -323,14 +323,14 @@ loop(Frame,Text, Filepath, Db, Posts, Notebook, Tabs) ->
 			end,
 			wxFileDialog:destroy(FD),
 
-			wxTextCtrl:saveFile(Text,[{file,SelectedFile}]),
+			wxHtmlWindow:saveFile(Text,[{file,SelectedFile}]),
 
 			loop(Frame,Text,Filepath, Db, Posts, Notebook, Tabs);
 
 		#wx{id=?NEW, event=#wxCommand{type=command_menu_selected}} ->
 			{_,EndPos} = lastLineRange(Text),
-			StartPos = wxTextCtrl:xYToPosition(Text,0,0),
-			wxTextCtrl:replace(Text,StartPos,EndPos,"MyBlog"),
+			StartPos = wxHtmlWindow:xYToPosition(Text,0,0),
+			wxHtmlWindow:replace(Text,StartPos,EndPos,"MyBlog"),
 			loop(Frame,Text,Filepath, Db, Posts, Notebook, Tabs);
 
 		#wx{id=?NEWTAB, event=#wxCommand{type=command_menu_selected}} ->
@@ -343,7 +343,7 @@ loop(Frame,Text, Filepath, Db, Posts, Notebook, Tabs) ->
 			TxtLabel = lists:flatten(io_lib:format("Tab ~p", [length(Tabs)+1])),
 			wxNotebook:addPage(Notebook, Win2, TxtLabel, []),
 
-			Text2 = wxTextCtrl:new(Win2, ?wxID_ANY, [{value,"MyBlog"}, {style,?wxTE_MULTILINE}, {size, {300,200}}]),
+			Text2 = wxHtmlWindow:new(Win2, [{id, ?wxID_ANY}, {style,?wxTE_MULTILINE}, {size, {300,200}}]),
 
 			NewTabs = Tabs ++ [{Win2, Text2, null, null, []}],
 
@@ -383,8 +383,8 @@ date({{Year, Month, Day}, {Hour, Minute, Second}})->
 	StrTime.
 
 lastLineRange(T) ->
-	S = wxTextCtrl:xYToPosition(T,0,wxTextCtrl:getNumberOfLines(T)-1),
-	F = wxTextCtrl:getLastPosition(T),
+	S = wxHtmlWindow:xYToPosition(T,0,wxHtmlWindow:getNumberOfLines(T)-1),
+	F = wxHtmlWindow:getLastPosition(T),
 	{S,F}.
 
 % c(blog_db).
