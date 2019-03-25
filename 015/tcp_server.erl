@@ -30,3 +30,6 @@ handle(Binary, Count) ->
 % c(tcp_server).
 %
 % tcp_server:server(1235).
+
+% wget http://127.0.0.1:1235/test
+% curl http://127.0.0.1:1235/test
