@@ -1,8 +1,11 @@
 -module(tcp_server).
--export([server/0, wait_connect/2]).
+-export([server/0, server/1, wait_connect/2]).
 
 server()->
-	{ok, ListenSocket} = gen_tcp:listen(1234, [binary, {active, false}]),
+	server(1234).
+
+server(Port)->
+	{ok, ListenSocket} = gen_tcp:listen(Port, [binary, {active, false}]),
 	wait_connect(ListenSocket,0).
 
 wait_connect(ListenSocket, Count) ->
@@ -13,6 +16,7 @@ wait_connect(ListenSocket, Count) ->
 get_request(Socket, BinaryList, Count) ->
 	case gen_tcp:recv(Socket, 0, 5000) of
 		{ok, Binary} ->
+			io:format("[~p]", [Binary]),
 			get_request(Socket, [Binary|BinaryList], Count);
 		{error, closed} ->
 			handle(lists:reverse(BinaryList), Count)
@@ -25,4 +29,4 @@ handle(Binary, Count) ->
 
 % c(tcp_server).
 %
-% tcp_server:server().
+% tcp_server:server(1235).
