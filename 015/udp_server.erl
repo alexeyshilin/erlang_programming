@@ -4,9 +4,9 @@
 test()->
 	ok.
 
-% {ok, Socket} = gen_udp:open(1234).
+% {ok, Socket} = gen_udp:open(1234,[binary,{header,2}]).
 
-% %wait sendin packets from #2
+% % wait sendin packets from #2
 
 % flush().
 
