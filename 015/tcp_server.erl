@@ -1,5 +1,5 @@
 -module(tcp_server).
--export([server/0, server/1, wait_connect/2]).
+-export([server/0, server/1, get_request/3]).
 
 server()->
 	server(1234).
@@ -10,8 +10,9 @@ server(Port)->
 
 wait_connect(ListenSocket, Count) ->
 	{ok, Socket} = gen_tcp:accept(ListenSocket),
-	Pid = spawn(?MODULE, wait_connect, [ListenSocket, Count+1]),
-	get_request(Socket, [], Count).
+	Pid = spawn(?MODULE, get_request, [Socket, [], Count]),
+	gen_tcp:controlling_process(Socket, Pid),
+	wait_connect(ListenSocket, Count+1).
 
 get_request(Socket, BinaryList, Count) ->
 	case gen_tcp:recv(Socket, 0, 5000) of
@@ -29,7 +30,11 @@ handle(Binary, Count) ->
 
 % c(tcp_server).
 %
-% tcp_server:server(1235).
+% tcp_server:server(1234).
+%
+
+% tcp_client:client({127,0,0,1}, <<"Hello Concurrent World">>).
+% tcp_client:client({127,0,0,1}, "Test data!!!").
 
 % wget http://127.0.0.1:1235/test
 % curl http://127.0.0.1:1235/test
