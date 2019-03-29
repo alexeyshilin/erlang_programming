@@ -10,6 +10,10 @@ myfact(php) ->
 	Cmd = "php myfact.php",
 	myfact(Cmd);
 
+myfact(c) ->
+	Cmd = "./myfact",
+	myfact(Cmd);
+
 myfact(Cmd) ->
 	%Cmd = "ruby myfact.rb",
 	%Cmd = "php myfact.php",
@@ -29,3 +33,4 @@ test() ->
 %
 % myfact:myfact(php).
 % myfact:myfact(ruby).
+% myfact:myfact(c).
