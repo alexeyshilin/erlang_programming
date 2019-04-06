@@ -44,3 +44,10 @@ loop() ->
 % Pid = ping:start().
 % ping:send(Pid).
 % flush().
+
+%% debug
+% Pid = ping:start().
+% dbg:tracer().
+% dbg:p(Pid, m).
+% ping:send(Pid).
+% dbg:stop().
