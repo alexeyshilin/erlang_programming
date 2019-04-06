@@ -51,3 +51,9 @@ loop() ->
 % dbg:p(Pid, m).
 % ping:send(Pid).
 % dbg:stop().
+
+%% dbg set_on_spawn
+% Pid = ping:start().
+% dbg:tracer().
+% dbg:p(Pid, [p, sos]).
+% ping:send(Pid).
