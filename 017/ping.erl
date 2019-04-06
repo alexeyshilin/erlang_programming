@@ -23,3 +23,9 @@ loop() ->
 % ping:send(Pid).
 % flush().
 % erlang:trace(Pid, false, [send, 'receive']).
+
+%% set_on_spawn
+% Pid = ping:start().
+% erlang:trace(Pid, true, [set_on_spawn, procs]).
+% ping:send(Pid).
+% flush().
