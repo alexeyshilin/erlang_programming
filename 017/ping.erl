@@ -36,3 +36,11 @@ loop() ->
 % ping:send(Pid).
 % erlang:garbage_collect(Pid).
 % flush().
+
+%% trace_pattern
+% l(ping).
+% erlang:trace(all, true, [call]).
+% erlang:trace_pattern({ping, '_', '_'}, [{'_',[],[{return_trace}]}], [local]).
+% Pid = ping:start().
+% ping:send(Pid).
+% flush().
