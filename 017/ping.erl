@@ -57,3 +57,11 @@ loop() ->
 % dbg:tracer().
 % dbg:p(Pid, [p, sos]).
 % ping:send(Pid).
+
+%% dbg calls
+% dbg:tracer().
+% dbg:p(all, [c]).
+% dbg:tp({ping, '_', '_' }, []).
+% Pid = ping:start().
+% ping:send(Pid).
+% dbg:ctp({ping, '_', '_'}).
