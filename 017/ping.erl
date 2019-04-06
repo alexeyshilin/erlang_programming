@@ -29,3 +29,10 @@ loop() ->
 % erlang:trace(Pid, true, [set_on_spawn, procs]).
 % ping:send(Pid).
 % flush().
+
+%% garbage_collection
+% Pid = ping:start().
+% erlang:trace(Pid, true, [garbage_collection, timestamp]).
+% ping:send(Pid).
+% erlang:garbage_collect(Pid).
+% flush().
