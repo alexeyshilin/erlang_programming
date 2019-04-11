@@ -29,8 +29,8 @@ area(Figure)->
 test()->
 	62.830000000000005 = shapes:perimeter(#circle{radius=10, color=white, attributes=[flat, transparent]}),
 	34 = shapes:perimeter(#rectangle{width=10,height=7, color=white, attributes=[flat, transparent]}),
-	Res = shapes:perimeter(#rectangle{width=10.11,height=7, color=white, attributes=[flat, solid]}), % error
-	done. % error
+	Res = shapes:perimeter(#rectangle{width=10,height=7, color=white, attributes=[flat, solid]}), % error
+	ok.
 
 
 % erl
