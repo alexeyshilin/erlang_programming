@@ -96,6 +96,30 @@ test_three()->
 	,?_assertEqual(ok, db:destroy([]))
 	].
 
+full_001_test_()->
+	Db = db:new(),
+	{spawn,
+		{setup,
+			fun()-> DbTest = db:new() end,
+			fun()-> ok = db:destroy(Db) end,
+			?_assertEqual([{francesco,london}], db:write(francesco, london, Db))
+		}
+	}.
+
+full_002_test_()->
+	Db0 = db:new(),
+	Db = db:write(francesco, london, Db0),
+
+	{spawn,
+		{setup,
+			fun()-> _ = db:new() end,
+			fun()-> ok = db:destroy(Db) end,
+			[
+			?_assertEqual([{lelle,'Stockholm'},{francesco,london}], db:write(lelle, 'Stockholm', Db))
+			,?_assertEqual({ok,london}, db:read(francesco, Db))
+			]
+		}
+	}.
 
 % c(db).
 %
@@ -112,3 +136,6 @@ test_three()->
 % eunit:test({timeout, 10, {db, somegroup_test_}}).
 % eunit:test({timeout, 10, {inorder, {db, some_test_}}}).
 % eunit:test({timeout, 10, {inparallel, {db, some_test_}}}).
+
+% eunit:test({db, full_001_test_}).
+% eunit:test({db, full_002_test_}).
