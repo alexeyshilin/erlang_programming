@@ -2,7 +2,7 @@
 %%% Описание : API и код genserver процесса для БД абонентов сети
 -module(usr).
 -export([start_link/0, start_link/1, stop/0]).
--export([init/1, terminate/2, handle_call/3, handle_cast/2]).
+-export([init/1, terminate/2, handle_call/3, handle_cast/2, handle_info/2]).
 -export([add_usr/3, delete_usr/1, set_service/3, set_status/2, delete_disabled/0, lookup_id/1]).
 -export([lookup_msisdn/1, service_flag/2]).
 -behavior(gen_server).
@@ -98,6 +98,8 @@ handle_call({set_status, CustId, Status}, From, LoopData) ->
 handle_call(delete_disabled, From, LoopData) ->
 	{reply, usr_db:delete_disabled(), LoopData}.
 
+handle_info(_Msg, LoopData) ->
+	{noreply, LoopData}.
 
 % c(usr).
 % c(usr_db).
