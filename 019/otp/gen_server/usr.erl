@@ -112,5 +112,6 @@ handle_call(delete_disabled, From, LoopData) ->
 % usr:service_flag(700000000, lbs).
 % usr:stop().
 
-
+% {ok, Pid} = usr:start_link().
+% Pid ! hello.
 
