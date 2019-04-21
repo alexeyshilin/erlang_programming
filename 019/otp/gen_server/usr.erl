@@ -8,6 +8,8 @@
 -behavior(gen_server).
 -include("usr.hrl").
 
+-include_lib("eunit/include/eunit.hrl").
+
 %% Экспортируемые клиентские функции
 %% API эксплуатации и технического обслуживания сервера
 start_link() ->
@@ -117,3 +119,63 @@ handle_info(_Msg, LoopData) ->
 % {ok, Pid} = usr:start_link().
 % Pid ! hello.
 
+some_test_()->
+	{spawn,
+		{setup
+			,fun() -> ok end % init
+			,fun(_) -> ok end % clear
+
+			%test
+			, {inorder,
+				[
+					some_test1()
+					,some_test2()
+					,some_test3()
+				]
+			}
+		}
+	}.
+
+some_test1()->
+	Value1 = true,
+	Value2 = true,
+	[
+		?_assertEqual(true, true)
+		,?_assertEqual(Value1, Value2)
+	].
+
+some_test2()->
+	Value1 = true,
+	Value2 = true,
+	[
+		?_assertEqual(true, true)
+		,?_assertEqual(Value1, Value2)
+	].
+
+some_test3()->
+	Value1 = true,
+	Value2 = true,
+	[
+		?_assertEqual(true, true)
+		,?_assertEqual(Value1, Value2)
+
+		,?_assertMatch({ok, Pid} when is_pid(Pid), usr:start_link())
+		,?_assertMatch({error,{already_started,Pid}} when is_pid(Pid), usr:start_link())
+
+		,?_assertEqual(ok, usr:add_usr(700000000, 0, prepay))
+		,?_assertEqual({ok,{usr,700000000,0,enabled,prepay,[]}}, usr:lookup_id(0))
+		,?_assertEqual(ok, usr:set_service(0, data, true))
+		,?_assertEqual({ok,{usr,700000000,0,enabled,prepay,[data]}}, usr:lookup_id(0))
+		,?_assertEqual(ok, usr:set_status(0, disabled))
+		,?_assertEqual({error,disabled}, usr:service_flag(700000000, lbs))
+		,?_assertEqual(ok, usr:set_status(0, enabled))
+		,?_assertEqual(false, usr:service_flag(700000000, lbs))
+		,?_assertEqual(true, usr:service_flag(700000000, data))
+
+		,?_assertEqual(ok, usr:stop())
+		,?_assertEqual(ok, usr:stop())
+	].
+
+% c(usr).
+% usr:test().
+% eunit:test(usr).
