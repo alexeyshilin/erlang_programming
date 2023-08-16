@@ -1,0 +1,24 @@
+
+[package]
+name = "someport"
+version = "0.0.1"
+edition = "2018"
+
+#[lib]
+#name = "someport"
+
+[dependencies]
+erl_dist = "0.6.0"
+futures = "0.3"
+#clap = "4.3.21"
+clap = { version = "4.3.21", features = ["derive"] }
+anyhow = "1.0.72"
+smol = "1.3.0"
+eetf = "0.8.0"
+rand = "0.8.5"
+
+[dev-dependencies]
+#smol = "1"
+#clap = { version = "3", features = ["derive"] }
+#anyhow = "1"
+
